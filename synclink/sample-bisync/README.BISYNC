@@ -1,0 +1,96 @@
+================================
+Byte Synchronous Sample Programs
+================================
+
+Monosync and bisync are byte synchronous protocols.
+
+The SyncLink adapters have no hardware support for
+data transparency or framing when using byte synchronous
+protocols. These functions are supplied by the application,
+such as escape characters for data transparency and
+start/end of block characters for framing.
+
+The application specifies a one byte (monosync) or
+two byte (bisync) synchronization pattern which
+activates the receiver.
+
+
+--------
+Transmit
+--------
+
+When enabled, the transmitter sends the sync pattern
+repeatedly when not sending data (idle).
+Data passed to the write() call is sent
+without modification by the hardware.
+
+The sync pattern must be prepended to
+transmit data by the application.
+
+When disabled, the transmit data pin is forced to
+a logical one state.
+
+
+-------
+Receive
+-------
+
+When enabled, the receiver is initially idle and no
+data is returned to the application. A sync pattern
+activates the receiver which returns data to the
+application with the read() call. The receiver continues
+returning data until it becomes idle. Sync patterns following
+the initial sync pattern are also returned as data. Disabling the
+receiver returns it to the idle state.
+
+ioctl(fd, MGSL_IOCRXENABLE, value) controls the receiver:
+
+value    action
+-----    ---------------------------------------
+  0      disable receiver
+
+  1      enable receiver (start in idle state)
+
+  2      enable receiver if disabled, else force
+         receiver to idle (hunt) state and leave enabled
+
+
+-----------------------
+Specifying Sync Pattern
+-----------------------
+
+The sync patterns are specified using ioctl(MGSL_IOCSTXIDLE)
+
+Bisync mode:
+
+	syn1 = 0x67;
+	syn2 = 0x98;
+	idle = HDLC_TXIDLE_CUSTOM_16 | (syn2 << 8) | syn1;
+	rc = ioctl(fd, MGSL_IOCSTXIDLE, idle);
+	if (rc < 0) {
+		printf("ioctl(MGSL_IOCSTXIDLE) on device %s"
+		       " failed with err=%d %s\n",
+		       devname, errno, strerror(errno));
+		return rc;
+	}
+
+Monosync mode:
+
+	syn1 = 0x67;
+	idle = HDLC_TXIDLE_CUSTOM_8 | syn1;
+	rc = ioctl(fd, MGSL_IOCSTXIDLE, idle);
+	if (rc < 0) {
+		printf("ioctl(MGSL_IOCSTXIDLE) on device %s"
+		       " failed with err=%d %s\n",
+		       devname, errno, strerror(errno));
+		return rc;
+	}
+
+-------
+Samples
+-------
+
+send-bisync.c sends a block of data in bisync mode.
+receive-bisync.c receives a block of data in bisync mode.
+
+Specify the device name for each program on the command line.

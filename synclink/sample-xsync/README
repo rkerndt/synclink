@@ -1,0 +1,87 @@
+=========================================
+Extended Byte Synchronous Sample Programs
+=========================================
+
+Extended byte synchronous mode sends and receives data
+that has no formatting other than the requirement that
+the receiver detect a sync pattern before returning data.
+
+The sync pattern can be selected for 1 to 4 bytes.
+Receive data is byte aligned to the sync pattern.
+
+The hardware includes an optional terminal count feature that may
+be used where packets are a fixed length. Specifying a
+terminal count will automatically put the receiver in hunt mode
+(idle state) after receiving the specified number of data bytes.
+
+--------
+Transmit
+--------
+
+In extended sync mode, the transmitter has three states:
+1. disabled - TxD output is constant mark (one)
+2. idle     - TxD output repeats transmit idle pattern
+3. active   - TxD output is data
+
+The transmitter starts in the disabled state.
+
+Enabling the transmitter with ioctl(fd, MGSL_IOCTXENABLE, 1)
+while in the disabled state puts the transmitter in the idle state.
+
+Calling write() to send data in either the disabled or idle
+state puts the transmitter in the active state until all data
+is sent, at which point the transmitter becomes idle.
+
+Calling ioctl(fd, MGSL_IOCTXENABLE, 0) in any state will put
+the transmitter in the disabled state.
+
+The application must supply the leading sync pattern in
+the buffer passed to write(). The hardware does not add
+the leading sync pattern automatically.
+
+
+-------
+Receive
+-------
+
+In extended sync mode, the receiver has three states:
+1. disabled - RxD input is ignored
+2. idle     - RxD input is scanned for sync pattern
+3. active   - RxD data is saved and returned to application
+
+The idle state is also referred to as "hunt mode" because
+the receiver is hunting for the sync pattern.
+
+The receiver starts in the disabled state.
+
+Enabling the receiver with ioctl(fd, MGSL_IOCRXENABLE, 1)
+while in the disabled state puts the receiver in the idle state
+and discards any data in the driver's receive buffers.
+
+Once an idle receiver detects a sync pattern, the receiver becomes
+active and data on the RxD input is saved to the driver's receiver
+buffers where the application can call read() to get the data.
+
+Calling ioctl(fd, MGSL_IOCRXENABLE, 0) in any state will put
+the receiver in the disabled state.
+
+Calling ioctl(fd, MGSL_IOCRXENABLE, 2) in any state will put
+the receiver in the idle (hunt) state.
+
+The application is responsible for detecting the end of a
+data block. Usually the application will disable and then
+enable the receiver after detecting the end of a block so
+that the receiver is idle and hunts for the leading sync 
+of the next block.
+
+The terminal count feature does this automatically when
+enabled and the specified number of bytes has been received.
+
+-------
+Samples
+-------
+
+send-xsync.c sends a block of data in extended sync mode.
+receive-xsync.c receives a block of data in extended sync mode.
+
+Specify the device name for each program on the command line.

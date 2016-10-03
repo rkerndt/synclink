@@ -1,0 +1,59 @@
+#!/bin/sh
+
+# Run the mgsltest program in master mode on an HDLC port.
+#
+# The testslave script should be run on another HDLC port
+# to echo the frames received from the master port back 
+# to the master port.
+#
+# The master and slave ports should be connected by a
+# NULL modem. The NULL modem should connect the master
+# (clock source) AUXCLK pin to the TxC/RxC pins of both
+# master and slave ports.
+
+
+# The first command line argument may be the master port device name.
+# Default is "/dev/ttySLG0" (1st SyncLink GT Adapter)
+
+if ( [ ! -z $1 ] ) then
+	DEVICE=$1
+else
+	DEVICE=/dev/ttySLG0
+fi
+
+
+if [ ! -f ./mgslutil ] ; then
+    echo "Can't find mgslutil program."
+    echo "Verify program is built and installed in PATH."
+    exit 1
+fi
+if [ ! -f ./mgsltest ] ; then
+    echo "Can't find mgsltest program."
+    echo "Verify program is built and installed in PATH."
+    exit 1
+fi
+
+
+# if SPEED is non-zero, then clocks are generated on the master
+# port AUXCLK pin at the specified speed in bits per second
+SPEED=38400
+
+# size in bytes of each test frame
+SIZE=1024
+
+# number of test frames to send
+COUNT=5
+
+# Set master port configuration.
+#
+# * hdlc option sets bit-synchronous HDLC mode
+# * nrz selects NRZ encoding
+# * clock $SPEED generates clocks on AUXCLK signal (if SPEED is non-zero)
+# * -loopback disables internal loopback mode
+# * txc takes transmit clock from the TxC pin
+# * rxc takes receive clock from the RxC pin
+
+./mgslutil $DEVICE hdlc nrz clock $SPEED -loopback txc rxc
+
+# start the mgsltest program in master mode
+./mgsltest $DEVICE size $SIZE count $COUNT

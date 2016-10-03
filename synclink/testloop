@@ -1,0 +1,110 @@
+#!/bin/sh
+
+#
+# sample script to configure a SyncLink device and run a loopback test
+#
+# By default, an internal loopback of 10 HDLC frames is performed.
+#
+# Edit the macros below to alter the test configuration.
+#
+# If running an external loopback, install the loopback plug
+# provided with your hardware.
+#
+
+if ( [ ! -z $1 ] ) then
+	DEVICE=$1
+else
+	echo "Specify device name as first command line argument."
+	echo "Example './testloop /dev/ttySLG0'"
+	exit 1
+fi
+
+#
+# verify presense of necessary utility programs to run test
+#
+dir=`dirname $0`
+if [ ! -f ${dir}/mgslutil ] ; then
+    echo "Can't find mgslutil, verify program is built and in PATH."
+    exit 1
+fi
+if [ ! -f ${dir}/mgsltest ] ; then
+    echo "Can't find mgsltest, verify program is built and in PATH."
+    exit 1
+fi
+if [ ! `which stty` ] ; then
+    echo "Can't find stty, verify program is installed and in PATH."
+    echo "This program is usually a part of the OS distribution."
+    exit 1
+fi
+
+# MODE : hdlc (bit synchronous HDLC) or async (asynchronous)
+MODE=hdlc
+#MODE=async
+
+# internal - data is looped internally in serial controller
+# external - external loopback device must be connected to serial connector
+LOOPBACK=internal
+#LOOPBACK=external
+
+# bit synchronous clock source (default is transmit and receive clock pins)
+CLOCKS="txc rxc"
+
+# speed in bits per second
+SPEED=19200
+
+# serial interface standard for adapters with software
+# selectable serial interfaces (rs232, v35, rs422)
+#IF="rs422"
+if [ -z $IF ] ; then
+    case "$DEVICE" in
+	/dev/ttyUSB[0-9] )
+	echo "Specify the serial interface standard (rs232, v35, rs422)"
+	echo "for the USB adapter by editing the IF variable in this"
+	echo "script (looptest)"
+	exit 1
+	;;
+    esac
+fi
+
+if [ ${LOOPBACK} = external ] ; then
+    LOOPBACK_OPT="-loopback"
+else	
+    LOOPBACK_OPT="+loopback"
+fi	
+
+# size in bytes of each data packet
+SIZE=100
+
+# count of data packets to send and receive
+COUNT=10
+	
+echo
+echo $LOOPBACK loopback test on $DEVICE, mode=$MODE speed=$SPEED, $COUNT Packets of $SIZE bytes
+
+######################################################
+#
+# CONFIGURE HARDWARE WITH OPTIONS SPECIFIED ABOVE
+#
+if ( [ $MODE == hdlc ] ) then
+    # HDLC mode
+    # configure device with mgslutil
+    ${dir}/mgslutil $DEVICE quiet hdlc idle1 $IF clock $SPEED $CLOCKS $LOOPBACK_OPT
+else
+    # asynchronous mode
+    # configure synclink specific settings with mgslutil
+    # configure termios settings with stty
+    ${dir}/mgslutil $DEVICE quiet async nrz idle1 $IF $LOOPBACK_OPT &&
+    stty --file=$DEVICE $SPEED \
+	-icanon -echo -echoctl -echonl -isig -noflsh -iexten \
+	-onlcr -opost -olcuc -onocr -ocrnl -onlret \
+	-icrnl -inpck -istrip -iuclc -ixoff -ixon -igncr \
+	-hupcl cs8 -parenb -cstopb -crtscts clocal cread min 1 time 0
+fi
+
+#####################################################
+#
+# EXECUTE THE TEST
+#
+${dir}/mgsltest $DEVICE size $SIZE count $COUNT
+
+exit 0

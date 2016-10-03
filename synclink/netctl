@@ -1,0 +1,229 @@
+#!/bin/sh
+
+# Sample script to control generic HDLC networking
+#
+# Modify script as necessary for specific applications.
+#
+
+# The tty and network device names below refer to the same
+# SyncLink device. The tty name is used to set serial options
+# and the network name is used to configure network options.
+
+# tty device name
+# used with mgslutil to set serial options
+#
+# /dev/ttySLGx where x is 0, 1, 2, etc. for SyncLink GT family adapters
+# /dev/ttyUSBx for SyncLink USB adapter
+TTYDEV=/dev/ttySLG0
+
+# network device name
+# used with sethdlc and ifconfig
+#
+# hdlcx where x is 0, 1, 2, etc.
+NETDEV=hdlc0
+
+# network protocol selection (set with sethdlc)
+#
+# hdlc  - raw HDLC
+# cisco - cisco HDLC
+# ppp   - point to point protocol
+# fr    - frame relay
+PROTOCOL=hdlc
+#PROTOCOL=cisco
+#PROTOCOL=ppp
+#PROTOCOL=fr
+
+# IP Addresses for each end of serial link
+#
+LOCAL_IP_ADDR=192.168.0.1
+REMOTE_IP_ADDR=192.168.0.2
+
+########################################################
+#
+# frame relay options (set with sethdlc)
+# used only when PROTOCOL=fr
+
+# frame relay LMI (link management interface) options
+LMI_PROTO=ccitt
+#LMI_PROTO=ansi
+#LMI_PROTO=none
+
+# DTE/user (leave blank) or DCE/network
+LMI_ROLE=
+#LMI_ROLE=dce
+
+# DTE keepalive polling interval in seconds
+#LMI_T391=t391 10
+
+# DCE keepalive checking interval in seconds
+#LMI_T392=t392 15
+
+# Full status polling interval
+#LMI_N391=n391 6
+
+# Error threshold
+#LMI_N392=n392 3
+
+# Monitored event count
+#LMI_N393=n393 4
+
+if [ "$LMI_PROTO" = "none" ] ; then
+    LMI_OPTIONS=$LMI_PROTO
+else
+    LMI_OPTIONS="$LMI_PROTO $LMI_ROLE $LMI_T391 $LMI_T392 $LMI_N391 $LMI_N392 $LMI_N393"
+fi
+#
+# end of frame relay options
+#
+########################################################
+
+########################################################
+#
+# serial options (set with mgslutil)
+#
+
+# serial encoding (must match encoding of remote device)
+# nrz, nrzi, nrzb, bimark (FM1), bispace (FM0), bilevel (manchester)
+ENCODING=nrzi
+
+# CRC type
+# crc16   - ITU CRC16 (usual value for HDLC)
+# crc32   - ITU CRC32
+# crcnone - CRC checking and generation disabled
+CRCTYPE=crc16
+
+# transmit data clock source:
+# txc   - transmit clock input (default for externally supplied clock)
+# txrxc - receive clock input
+# txbrg - baud rate generator (same as AUXCLK output)
+TXCLKSRC=txc
+
+# receive data clock source:
+# rxc    - receive clock input (default for externally supplied clock)
+# rxtxc  - transmit clock input
+# rxbrg  - baud rate generator (same as AUXCLK output)
+# rxdpll - DPLL clock recovery from receive data input
+RXCLKSRC=rxc
+
+# baud rate generator (BRG)/AUXCLK output speed (bits per second)
+# 0        = disable AUXCLK output (use if external clocks provided)
+# non zero = generate clock at specified rate on AUXCLK output
+#            also sets the data rate if using DPLL clock recovery.
+CLOCKSPEED=19200
+
+# serial interface type. Only for adapters with
+# programmable interface such as SyncLink PCMCIA Card
+#SERIAL_IF=rs232
+#SERIAL_IF=v35
+#SERIAL_IF=rs422
+
+#
+# end of serial options
+#
+########################################################
+
+
+# program locations may be distribution specific
+IFCONFIG=/sbin/ifconfig
+SETHDLC=sethdlc
+
+
+
+exit_error() {
+    echo "ERROR"
+    exit
+}
+
+#-----------------
+# Start connection
+#-----------------
+start() {
+
+    echo ""
+
+    # load HDLC modules if not compiled into kernel
+
+    case "$PROTOCOL" in
+    "hdlc" )
+    echo "Loading generic HDLC module(s) for raw HDLC..."
+    modprobe hdlc_raw
+    ;;
+    "cisco" )
+    echo "Loading generic HDLC module(s) for Cisco HDLC..."
+    modprobe hdlc_cisco
+    ;;
+    "ppp" )
+    echo "Loading generic HDLC module(s) for PPP..."
+    modprobe hdlc_ppp
+    ;;
+    "fr" )
+    echo "Loading generic HDLC module(s) for frame relay..."
+    modprobe hdlc_fr
+    ;;
+    *)
+    echo "Unrecognized protocol $PROTOCOL"
+    exit 1
+    esac
+
+if [ "$PROTOCOL" = "fr" ] ; then
+    echo -n "Configuring $NETDEV for frame relay..."
+    $SETHDLC $NETDEV fr lmi $LMI_OPTIONS || exit_error
+    echo "OK"
+    echo -n "Adding PVCs to $NETDEV..."
+    $SETHDLC $NETDEV create 16 || exit_error
+    echo "OK"
+else
+    echo -n "Configuring $PROTOCOL protcol for net device $NETDEV..."
+    $SETHDLC $NETDEV $PROTOCOL || exit_error
+    echo "OK"
+fi
+
+    echo -n "Configuring serial options for tty device $TTYDEV..."
+    ./mgslutil $TTYDEV quiet -loopback $ENCODING $TXCLKSRC $RXCLKSRC $CRCTYPE clock $CLOCKSPEED $SERIAL_IF || exit_error
+    echo "OK"
+
+if [ "$PROTOCOL" = "fr" ] ; then
+    echo -n "Starting master HDLC device $NETDEV..."
+    $IFCONFIG $NETDEV up || exit_error
+    echo "OK"
+    echo -n "Configuring and starting network interface pvc0..."
+    $IFCONFIG pvc0 $LOCAL_IP_ADDR pointopoint $REMOTE_IP_ADDR up || exit_error
+else
+    echo -n "Configuring and starting network interface $NETDEV..."
+    $IFCONFIG $NETDEV $LOCAL_IP_ADDR pointopoint $REMOTE_IP_ADDR up || exit_error
+fi
+    echo "OK"
+    echo""
+}
+
+#----------------
+# Stop connection
+#----------------
+stop() {
+    echo ""
+
+if [ "$PROTOCOL" = "fr" ] ; then
+    echo -n "Stopping network interface pcv0..."
+    $IFCONFIG pvc0 down || exit_error
+    echo -n "Stopping master HDLC device $NETDEV..."
+    $IFCONFIG $NETDEV down || exit_error
+    echo -n "Deleting PVCs..."
+    $SETHDLC $NETDEV delete 16 || exit_error
+else
+    echo -n "Stopping network interface $NETDEV..."
+    $IFCONFIG $NETDEV down || exit_error
+fi
+    echo "OK"
+    echo ""
+}
+
+case "$1" in
+    "start" )
+    start
+    ;;
+    "stop" )
+    stop
+    ;;
+    *)
+    echo "usage: rawctl [start|stop]"
+esac

@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# Run the mgsltest program in slave mode on an HDLC port.
+#
+# The testmaster script should be run on another HDLC port
+# to supply data clocks and to send frames to the slave port.
+#
+# The master and slave ports should be connected by a
+# NULL modem. The NULL modem should connect the master
+# (clock source) AUXCLK pin to the TxC/RxC pins of both
+# master and slave ports.
+
+
+# The first command line argument may be the slave port device name.
+# Default is "/dev/ttySLG1" (2nd SyncLink GT Adapter)
+
+if ( [ ! -z $1 ] ) then
+	DEVICE=$1
+else
+	DEVICE=/dev/ttySLG1
+fi
+
+if [ ! -f ./mgslutil ] ; then
+    echo "Can't find mgslutil program."
+    echo "Verify program is built and installed in PATH."
+    exit 1
+fi
+if [ ! -f ./mgsltest ] ; then
+    echo "Can't find mgsltest program."
+    echo "Verify program is built and installed in PATH."
+    exit 1
+fi
+
+# set SPEED to 0 to disable clock generation
+# (clocks are supplied by master)
+SPEED=0
+
+# Set slave port configuration.
+#
+# * hdlc option sets bit-synchronous HDLC mode
+# * nrz selects NRZ encoding
+# * clock $SPEED with SPEED==0 disables clock generation
+# * -loopback disables internal loopback mode
+# * txc takes transmit clock from the TxC pin
+# * rxc takes receive clock from the RxC pin
+
+./mgslutil $DEVICE hdlc nrz clock $SPEED -loopback txc rxc
+
+# start the mgsltest program in slave mode
+./mgsltest $DEVICE slave
