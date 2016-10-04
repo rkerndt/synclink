@@ -13,5 +13,11 @@
 # most of these drivers are already in 2.6 kernels
 # replace obj-m with line below to build all modules
 #obj-m += n_hdlc.o synclink_gt.o synclink_usb.o
-obj-m += synclink_gt.o synclink_usb.o
+#obj-m += synclink_gt.o synclink_usb.o
+obj-m += synclink_usb.o
 
+clean:
+	@rm -rf .tmp_versions
+	@rm -f Module.symvers
+	@rm -f modules.order
+	@rm -f *.o *.ko  

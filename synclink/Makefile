@@ -5,12 +5,16 @@
 # of Microgate Systems Ltd
 #
 
+# set these to suit your environment
+SRC_PREFIX ?= /home/kerndtr/src/linux
+LINUX_VERSION ?= 4.7.5
+
 # Location of the kernel source
 # Required to build drivers outside of kernel source tree.
-KERNEL_SRC_DIR = /usr/src/linux
+KERNEL_SRC_DIR = $(SRC_PREFIX)/linux-$(LINUX_VERSION)
 
 # Destination to install SyncLink utility programs
-UTIL_INSTALL_DIR = /usr/local/sbin
+UTIL_INSTALL_DIR = /usr/local/bin
 
 # device driver base names
 DRIVER_NAMES = n_hdlc synclink_gt synclink_usb
@@ -26,7 +30,7 @@ KERNEL_SRC_VERSION_PATCH := $(shell ./kernelver.sh VERSION_PATCH ${KERNEL_SRC_DI
 DRIVER_SRC_DIR := drivers/kernel-2.6
 
 # Uncomment this to add debugging information to programs
-#DEBUG=1
+DEBUG=1
 
 CFLAGS := -Wall -Wstrict-prototypes -fomit-frame-pointer 
 ifdef DEBUG
@@ -37,6 +41,9 @@ endif
 
 # utility program and sample names
 UTILS := mgslutil mgsltest sample_hdlc sample_raw sample_async sample_bisync sample_xsync gpio sethdlc
+
+# list of subdirs so we can call make clean in them
+SUB_DIRS := drivers/kernel-2.6 sample-async sample-bisync sample-hdlc sample-raw sample-xsync
 
 all_targets all: utils
 utils: $(UTILS)
@@ -176,6 +183,9 @@ CLEAN_TARGETS = *~ core $(UTILS) *.o *.ko *.mod.c *.mod.o .*.o.flags .*o.cmd
 clean:
 	@for f in $(CLEAN_TARGETS) ; do \
 		find . -name "$$f" | xargs rm -f ; \
+	done;
+	@for d in $(SUB_DIRS) ; do \
+	  make -C $$d clean; \
 	done;
 	@rm -f  sethdlc
 	@rm -f  sethdlc-src/sethdlc
