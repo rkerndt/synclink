@@ -11,7 +11,7 @@ LINUX_VERSION ?= 4.7.5
 
 # Location of the kernel source
 # Required to build drivers outside of kernel source tree.
-KERNEL_SRC_DIR = $(SRC_PREFIX)/linux-$(LINUX_VERSION)
+KERNEL_SRC_DIR ?= $(SRC_PREFIX)/linux-$(LINUX_VERSION)
 
 # Destination to install SyncLink utility programs
 UTIL_INSTALL_DIR = /usr/local/bin
