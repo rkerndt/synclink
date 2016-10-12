@@ -12,10 +12,10 @@ endif
 all : send-xsync receive-xsync
 
 send-xsync: send-xsync.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o send-xsync send-xsync.c
+	$(CC) $(CFLAGS) -I ../ -o send-xsync send-xsync.c
 
 receive-xsync: receive-xsync.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o receive-xsync receive-xsync.c
+	$(CC) $(CFLAGS) -I ../ -o receive-xsync receive-xsync.c
 
 
 # Remove all generated files and backup files

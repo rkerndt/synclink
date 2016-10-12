@@ -5,6 +5,10 @@
 # of Microgate Systems Ltd
 #
 
+# setup variables to cross compile utilities and samples
+CROSS_COMPILE ?=
+CC = $(CROSS_COMPILE)gcc
+
 # set these to suit your environment
 SRC_PREFIX ?= /home/kerndtr/src/linux
 LINUX_VERSION ?= 4.7.5
@@ -13,8 +17,14 @@ LINUX_VERSION ?= 4.7.5
 # Required to build drivers outside of kernel source tree.
 KERNEL_SRC_DIR ?= $(SRC_PREFIX)/linux-$(LINUX_VERSION)
 
+# File System root for installation
+INSTALL_ROOT ?= /
+
 # Destination to install SyncLink utility programs
-UTIL_INSTALL_DIR = /usr/local/bin
+UTIL_INSTALL_DIR ?= $(INSTALL_ROOT)usr/local/bin
+
+# Base path for kernel modules
+LIB_MODULES_BASE ?= $(INSTALL_ROOT)lib/modules
 
 # device driver base names
 DRIVER_NAMES = n_hdlc synclink_gt synclink_usb
@@ -112,15 +122,15 @@ sample_xsync:
 
 # SyncLink Configuration utility
 mgslutil: mgslutil.c synclink.h
-	gcc $(CFLAGS) -o mgslutil mgslutil.c
+	$(CC) $(CFLAGS) -o mgslutil mgslutil.c
 
 # SyncLink Diagnostics/Sample Application	
 mgsltest: mgsltest.c synclink.h
-	gcc $(CFLAGS) -o mgsltest mgsltest.c
+	$(CC) $(CFLAGS) -o mgsltest mgsltest.c
 
 # sample general purpose I/O program
 gpio: gpio.c synclink.h
-	gcc $(CFLAGS) -o gpio gpio.c
+	$(CC) $(CFLAGS) -o gpio gpio.c
 
 # sethdlc utility
 sethdlc:
@@ -129,7 +139,7 @@ sethdlc:
 
 
 # compiled driver installation directory
-LIB_MODULES_DIR := /lib/modules/$(KERNEL_SRC_VERSION)
+LIB_MODULES_DIR := $(LIB_MODULES_BASE)/$(KERNEL_SRC_VERSION)
 ifeq ($(shell expr "$(KERNEL_SRC_VERSION)" ">=" "2.6.39"), 1)
 DRIVER_INSTALL_DIR := $(LIB_MODULES_DIR)/kernel/drivers/tty
 else
@@ -174,7 +184,10 @@ driver_install : driver
 		fi \
 	done;
 
+# skip this step if cross compiling
+ifndef CROSS_COMPILE
 	/sbin/depmod -a $(KERNEL_SRC_VERSION) ;
+endif
 
 #
 # Remove all generated files and backup files

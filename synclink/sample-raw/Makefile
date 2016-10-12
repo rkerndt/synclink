@@ -24,10 +24,10 @@ endif
 all : send-raw receive-raw
 
 send-raw: send-raw.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o send-raw send-raw.c
+	$(CC) $(CFLAGS) -I ../ -o send-raw send-raw.c
 
 receive-raw: receive-raw.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o receive-raw receive-raw.c
+	$(CC) $(CFLAGS) -I ../ -o receive-raw receive-raw.c
 
 
 # Remove all generated files and backup files

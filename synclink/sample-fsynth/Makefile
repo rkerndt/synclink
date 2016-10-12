@@ -19,7 +19,7 @@ endif
 all : fsynth
 
 fsynth: fsynth.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o fsynth fsynth.c
+	$(CC) $(CFLAGS) -I ../ -o fsynth fsynth.c
 
 
 # Remove all generated files and backup files

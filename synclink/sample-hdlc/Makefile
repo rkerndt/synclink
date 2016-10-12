@@ -24,10 +24,10 @@ endif
 all : send-hdlc receive-hdlc
 
 send-hdlc: send-hdlc.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o send-hdlc send-hdlc.c
+	$(CC) $(CFLAGS) -I ../ -o send-hdlc send-hdlc.c
 
 receive-hdlc: receive-hdlc.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o receive-hdlc receive-hdlc.c
+	$(CC) $(CFLAGS) -I ../ -o receive-hdlc receive-hdlc.c
 
 
 # Remove all generated files and backup files

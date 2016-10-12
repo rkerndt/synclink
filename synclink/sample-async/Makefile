@@ -24,10 +24,10 @@ endif
 all : send-async receive-async
 
 send-async: send-async.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o send-async send-async.c
+	$(CC) $(CFLAGS) -I ../ -o send-async send-async.c
 
 receive-async: receive-async.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o receive-async receive-async.c
+	$(CC) $(CFLAGS) -I ../ -o receive-async receive-async.c
 
 
 # Remove all generated files and backup files

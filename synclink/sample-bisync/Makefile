@@ -24,10 +24,10 @@ endif
 all : send-bisync receive-bisync
 
 send-bisync: send-bisync.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o send-bisync send-bisync.c
+	$(CC) $(CFLAGS) -I ../ -o send-bisync send-bisync.c
 
 receive-bisync: receive-bisync.c ../synclink.h
-	gcc $(CFLAGS) -I ../ -o receive-bisync receive-bisync.c
+	$(CC) $(CFLAGS) -I ../ -o receive-bisync receive-bisync.c
 
 
 # Remove all generated files and backup files
